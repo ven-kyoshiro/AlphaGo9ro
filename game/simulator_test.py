@@ -6,9 +6,9 @@ class Sim:
     def __init__(self):
         self.st2ind={} #ket=state_indx,value = list_indx TODO:この関数initへ
         self.place2id = [] # TODO:この関数initへ
+        self.was_pass = False
         count = 1
         for i in range(11):
-            ft_sub=[]
             place2id_sub = []
             for j in range(11):
                 if i*(10-i)*j*(10-j) ==0:
@@ -26,17 +26,19 @@ class Sim:
         self.state = np.array([0. for i in range(84)])
         self.ban = 1.
         self.kou = []
+        self.game_over = False
 
     def get_s(self):
-        return self.state,self.ban,self.kou
+        if self.game_over:
+            self.ban = 0
+        return self.state, self.ban, self.kou
 
     def is_enclosed(self,act_num):
         # その石が死んでいるか確認
         pos = [self.st2ind[act_num][0],self.st2ind[act_num][1]]
         #TODO dbg
-        print(pos)
-        print(act_num)
-
+        # print(pos)
+        # print(act_num)
         self.ban = 3. - self.ban
         find_table = self.get_find_table()
         find_table[pos[0]][pos[1]]= 3. - self.ban
@@ -154,4 +156,49 @@ class Sim:
             print('show find_table below')
             for ft in find_table:
                 print(ft)
+        if act_num ==0:
+            if self.was_pass == True:
+                self.game_over = True
+                self.was_pass = False
+            else:
+                self.was_pass = True
         self.ban = 3. -self.ban
+    
+    def fill_area(self, find_table, pos):
+        find_table[pos[0]][pos[1]] = 3.
+        self.my_pos.append(pos)
+        for i in [[0,-1],[0,1],[-1,0],[1,0]]:
+            pos_i = find_table[pos[0]+i[0]][pos[1]+i[1]]
+            if  pos_i == 3. - self.ban:
+                self.my_flug = False
+            elif pos_i == 0.:
+                self.fill_area(find_table,[pos[0]+i[0],pos[1]+i[1]])
+
+    def get_bans_pos(self,ban):
+        self.ban = ban
+        find_table = self.get_find_table()
+        bans_pos = []
+        for i in range(1,82):
+            pos = self.st2ind[i]
+            if find_table[pos[0]][pos[1]] == 0.:
+                self.my_flug = True
+                self.my_pos = []
+                self.fill_area(find_table,pos)
+                if self.my_flug:
+                    bans_pos += self.my_pos
+                    for dp in self.my_pos:
+                        find_table[dp[0]][dp[1]] = -1. * self.ban
+                else:
+                    for dp in self.my_pos:
+                        find_table[dp[0]][dp[1]] = -5.
+        return bans_pos
+
+    def get_eval(self):
+        ban_memory = self.ban
+        br = self.get_bans_pos(1.0)
+        br = [self.place2id[b[0]][b[1]] for b in br]
+        wh = self.get_bans_pos(2.0)
+        wh = [self.place2id[w[0]][w[1]] for w in wh]
+        self.ban = ban_memory
+        return br,wh
+
