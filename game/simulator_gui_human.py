@@ -5,12 +5,12 @@ import sys
 import time
 from simulator_test import Sim
 
-def draw(pygame, screen, sysfont, pixels, state, ban, x, y, br_v, wh_v):
+def draw(pygame, screen, sysfont, pixels, state, ban, x, y, bl_v, wh_v):
     bp = pixels[0]
     g = pixels[1]
     mar = pixels[2]
     pixels = [bp,g,mar]
-    b_score = len(br_v) + 6.5 # 六目半
+    b_score = len(bl_v) + 6.5 # 六目半
     w_score = len(wh_v)
     # 勝敗のカウント
     for i in state[1:82]:
@@ -20,16 +20,16 @@ def draw(pygame, screen, sysfont, pixels, state, ban, x, y, br_v, wh_v):
             w_score += 1
     pas = sysfont.render("pass", True, (0,0,0))
     res = sysfont.render("reset", True, (0,0,0))
-    br = sysfont.render("brack", True, (0,0,0))
-#    br_num = sysfont.render(str(state[82]), True, (0,0,0))
-    br_num = sysfont.render(str(b_score), True, (0,0,0))
+    bl = sysfont.render("black", True, (0,0,0))
+#    bl_num = sysfont.render(str(state[82]), True, (0,0,0))
+    bl_num = sysfont.render(str(b_score), True, (0,0,0))
     wh = sysfont.render("white", True, (255,255,255))
 #    wh_num = sysfont.render(str(state[83]), True, (255,255,255))
     wh_num = sysfont.render(str(w_score), True, (255,255,255))
 
     pygame.draw.rect(screen, (222,184,135), Rect(bp[0],bp[1],g*8+mar*2,g*8+mar*2))
-    screen.blit(br, (15,15))
-    screen.blit(br_num, (15,15+50))
+    screen.blit(bl, (15,15))
+    screen.blit(bl_num, (15,15+50))
     screen.blit(wh, (600-100,15))
     screen.blit(wh_num, (600-100,15+50))
 
@@ -58,13 +58,13 @@ def draw(pygame, screen, sysfont, pixels, state, ban, x, y, br_v, wh_v):
         if s != 0:
             c = 255*(s-1)
             pygame.draw.circle(screen, (c,c,c), (bp[0]+mar+(i%9)*g, bp[1]+mar+int(i/9)*g), 17)
-        if i+1 in br_v:
+        if i+1 in bl_v:
             c  = 20
             pygame.draw.circle(screen, (c,c,c), (bp[0]+mar+(i%9)*g, bp[1]+mar+int(i/9)*g), 5)
         if i+1 in wh_v:
             c = 235
             pygame.draw.circle(screen, (c,c,c), (bp[0]+mar+(i%9)*g, bp[1]+mar+int(i/9)*g), 5)
-        if i+1 in br_v and i+1 in wh_v:
+        if i+1 in bl_v and i+1 in wh_v:
             c = 128
             pygame.draw.circle(screen, (c,c,c), (bp[0]+mar+(i%9)*g, bp[1]+mar+int(i/9)*g), 5)
     pygame.draw.circle(screen, (255,0,0), (x, y),  5)
@@ -112,9 +112,9 @@ def main():
     while True:
         screen.fill((0,100,0,)) # 背景色の指定。
         state,ban,kou = s.get_s()
-        br, wh = s.get_eval()
+        bl, wh = s.get_eval()
         # TODO for debug
-        draw(pygame, screen, sysfont, pixels,state, ban ,x,y,br,wh)
+        draw(pygame, screen, sysfont, pixels,state, ban ,x,y,bl,wh)
         pygame.display.update() # 画面更新
         for event in pygame.event.get(): # 終了処理
             if event.type == QUIT:
@@ -128,8 +128,8 @@ def main():
                 else:
                     if num in s.regal_acts() and ban != 0:
                         s.act(num)
-                        br, wh = s.get_eval()
-                        if len(br) != len(set(br)):
+                        bl, wh = s.get_eval()
+                        if len(bl) != len(set(bl)):
                             print('[error] get_eval has over lap')
                 
 if __name__ == '__main__':

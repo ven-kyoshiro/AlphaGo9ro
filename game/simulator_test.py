@@ -195,10 +195,10 @@ class Sim:
 
     def get_eval(self):
         ban_memory = self.ban
-        br = self.get_bans_pos(1.0)
-        br = [self.place2id[b[0]][b[1]] for b in br]
+        bl = self.get_bans_pos(1.0)
+        bl = [self.place2id[b[0]][b[1]] for b in bl]
         wh = self.get_bans_pos(2.0)
         wh = [self.place2id[w[0]][w[1]] for w in wh]
         self.ban = ban_memory
-        return br,wh
+        return bl,wh
 
