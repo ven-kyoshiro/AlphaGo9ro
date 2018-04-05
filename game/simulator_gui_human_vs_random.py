@@ -97,7 +97,7 @@ def convert_to_num(pixels,x,y):
 def main():
     # preparation of pygame　
     pygame.init() # 初期化
-    AIis = 1 #１が黒，2が白
+    AIis = 2 #１が黒，2が白
     ai = RandomAgent()
     bp = [115,15]
     g = 40

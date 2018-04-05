@@ -2,6 +2,7 @@
 from simulator_test import Sim
 import numpy as np
 import random 
+IS_DEBUG = False
 class RandomAgent:
     def __init__(self):
         pass
@@ -14,7 +15,7 @@ class RandomAgent:
         state = ban * reshape_self + (3.-ban) * reshape_opp
         simsim.set_s(state,ban,kou)        
         regal = simsim.regal_acts()
-        print(regal)
+        if IS_DEBUG: print(regal)
         a = random.choice(regal)
-        print(a)
+        if IS_DEBUG: print(a)
         return a
