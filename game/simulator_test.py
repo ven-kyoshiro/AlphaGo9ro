@@ -21,9 +21,8 @@ class Sim:
             self.place2id.append(place2id_sub)
 
 
-
-    def set_s(self):
-        self.state = np.array([0. for i in range(84)])
+    def set_s(self, st = np.array([0. for i in range(84)])):
+        self.state = 
         self.ban = 1.
         self.kou = []
         self.game_over = False
@@ -31,7 +30,16 @@ class Sim:
     def get_s(self):
         if self.game_over:
             self.ban = 0
-        return self.state, self.ban, self.kou
+        ## 扱いやすくるすために盤面のデータを整形
+        reshape_ban = 2 - self.ban
+        stt = self.state[0:82]
+        if reshape_ban == 0: # 白番の時
+            reshape_self = stt*(stt-1)/2 # 2だけが1
+            reshape_opp = stt*(2-stt) # 1だけが1
+        else:
+            reshape_opp = stt*(stt-1)/2 # 2だけが1
+            reshape_self = stt*(2-stt) # 1だけが1           
+        return reshape_self,reshape_opp,reshape_ban
 
     def is_enclosed(self,act_num):
         # その石が死んでいるか確認
@@ -43,7 +51,7 @@ class Sim:
         find_table = self.get_find_table()
         find_table[pos[0]][pos[1]]= 3. - self.ban
         is_del = len(self.can_get(find_table,pos)) != 0
-        self.ban = 3. - self.ban
+        self.ban = 3 - self.ban
         return is_del
 
     def is_kou(self,act_num):
@@ -156,6 +164,7 @@ class Sim:
             print('show find_table below')
             for ft in find_table:
                 print(ft)
+            self.was_pass = False
         if act_num ==0:
             if self.was_pass == True:
                 self.game_over = True
