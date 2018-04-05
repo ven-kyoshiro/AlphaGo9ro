@@ -21,8 +21,8 @@ class Sim:
             self.place2id.append(place2id_sub)
 
 
-    def set_s(self, st = np.array([0. for i in range(84)])):
-        self.state = st
+    def set_s(self):
+        self.state = np.array([0. for i in range(84)])
         self.ban = 1.
         self.kou = []
         self.game_over = False

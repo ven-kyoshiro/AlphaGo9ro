@@ -10,8 +10,8 @@ def draw(pygame, screen, sysfont, pixels, state, ban, x, y, bl_v, wh_v):
     g = pixels[1]
     mar = pixels[2]
     pixels = [bp,g,mar]
-    b_score = len(bl_v) + 6.5 # 六目半
-    w_score = len(wh_v)
+    b_score = len(bl_v) 
+    w_score = len(wh_v)+ 6.5 # 六目半
     # 勝敗のカウント
     for i in state[1:82]:
         if i == 1.:
@@ -56,7 +56,7 @@ def draw(pygame, screen, sysfont, pixels, state, ban, x, y, bl_v, wh_v):
 
     for i, s in enumerate(state[1:82]):
         if s != 0:
-            c = 255*(s-1)
+            c = 255*(s - 1)
             pygame.draw.circle(screen, (c,c,c), (bp[0]+mar+(i%9)*g, bp[1]+mar+int(i/9)*g), 17)
         if i+1 in bl_v:
             c  = 20
@@ -111,7 +111,13 @@ def main():
 
     while True:
         screen.fill((0,100,0,)) # 背景色の指定。
-        state,ban,kou = s.get_s()
+        # state,ban = s.get_s()
+        # gui用に整形をかませる
+        reshape_self, reshape_opp, reshape_ban = s.get_s()
+        ban = 2 - int(reshape_ban)
+        # game over すなわち ban == 0の時の処理
+        if ban != 0:
+            state = ban * reshape_self + (3.-ban)*reshape_opp
         bl, wh = s.get_eval()
         # TODO for debug
         draw(pygame, screen, sysfont, pixels,state, ban ,x,y,bl,wh)
