@@ -21,17 +21,31 @@ class Sim:
             self.place2id.append(place2id_sub)
 
 
+    def reset_s(self):
+        state = np.array([0. for i in range(84)])
+        ban = 1.
+        kou = []
+        self.set_s(state,ban,kou)
 
-    def set_s(self):
-        self.state = np.array([0. for i in range(84)])
-        self.ban = 1.
-        self.kou = []
+    def set_s(self,state,ban,kou):
+        self.state = state
+        self.ban = ban
+        self.kou = kou
         self.game_over = False
 
     def get_s(self):
         if self.game_over:
             self.ban = 0
-        return self.state, self.ban, self.kou
+        ## 扱いやすくるすために盤面のデータを整形
+        reshape_ban = 2 - self.ban
+        stt = self.state[0:82]
+        if reshape_ban == 0: # 白番の時
+            reshape_self = stt*(stt-1)/2 # 2だけが1
+            reshape_opp = stt*(2-stt) # 1だけが1
+        else:
+            reshape_opp = stt*(stt-1)/2 # 2だけが1
+            reshape_self = stt*(2-stt) # 1だけが1           
+        return reshape_self,reshape_opp,reshape_ban,self.kou
 
     def is_enclosed(self,act_num):
         # その石が死んでいるか確認
@@ -43,7 +57,7 @@ class Sim:
         find_table = self.get_find_table()
         find_table[pos[0]][pos[1]]= 3. - self.ban
         is_del = len(self.can_get(find_table,pos)) != 0
-        self.ban = 3. - self.ban
+        self.ban = 3 - self.ban
         return is_del
 
     def is_kou(self,act_num):
@@ -156,6 +170,7 @@ class Sim:
             print('show find_table below')
             for ft in find_table:
                 print(ft)
+            self.was_pass = False
         if act_num ==0:
             if self.was_pass == True:
                 self.game_over = True
@@ -195,10 +210,10 @@ class Sim:
 
     def get_eval(self):
         ban_memory = self.ban
-        br = self.get_bans_pos(1.0)
-        br = [self.place2id[b[0]][b[1]] for b in br]
+        bl = self.get_bans_pos(1.0)
+        bl = [self.place2id[b[0]][b[1]] for b in bl]
         wh = self.get_bans_pos(2.0)
         wh = [self.place2id[w[0]][w[1]] for w in wh]
         self.ban = ban_memory
-        return br,wh
+        return bl,wh
 
