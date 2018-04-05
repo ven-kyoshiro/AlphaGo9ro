@@ -107,13 +107,13 @@ def main():
 
     # preparation of simulator    
     s = Sim()
-    s.set_s()  # 引数のなしの時は何も置かれていない状態となる
+    s.reset_s()  # 引数のなしの時は何も置かれていない状態となる
 
     while True:
         screen.fill((0,100,0,)) # 背景色の指定。
         # state,ban = s.get_s()
         # gui用に整形をかませる
-        reshape_self, reshape_opp, reshape_ban = s.get_s()
+        reshape_self, reshape_opp, reshape_ban, _ = s.get_s()
         ban = 2 - int(reshape_ban)
         # game over すなわち ban == 0の時の処理
         if ban != 0:
@@ -130,7 +130,7 @@ def main():
                 x, y = event.pos
                 num = convert_to_num(pixels,x,y)
                 if num == -1:
-                    s.set_s()
+                    s.reset_s()
                 else:
                     if num in s.regal_acts() and ban != 0:
                         s.act(num)

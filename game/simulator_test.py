@@ -21,10 +21,16 @@ class Sim:
             self.place2id.append(place2id_sub)
 
 
-    def set_s(self):
-        self.state = np.array([0. for i in range(84)])
-        self.ban = 1.
-        self.kou = []
+    def reset_s(self):
+        state = np.array([0. for i in range(84)])
+        ban = 1.
+        kou = []
+        self.set_s(state,ban,kou)
+
+    def set_s(self,state,ban,kou):
+        self.state = state
+        self.ban = ban
+        self.kou = kou
         self.game_over = False
 
     def get_s(self):
@@ -39,7 +45,7 @@ class Sim:
         else:
             reshape_opp = stt*(stt-1)/2 # 2だけが1
             reshape_self = stt*(2-stt) # 1だけが1           
-        return reshape_self,reshape_opp,reshape_ban
+        return reshape_self,reshape_opp,reshape_ban,self.kou
 
     def is_enclosed(self,act_num):
         # その石が死んでいるか確認
