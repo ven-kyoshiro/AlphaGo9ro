@@ -22,7 +22,7 @@ class Sim:
 
 
     def set_s(self, st = np.array([0. for i in range(84)])):
-        self.state = 
+        self.state = st
         self.ban = 1.
         self.kou = []
         self.game_over = False
