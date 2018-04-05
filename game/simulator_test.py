@@ -2,6 +2,7 @@
 import numpy as np
 import copy
 
+IS_DEBUG = False
 class Sim:
     def __init__(self):
         self.st2ind={} #ket=state_indx,value = list_indx TODO:この関数initへ
@@ -51,8 +52,8 @@ class Sim:
         # その石が死んでいるか確認
         pos = [self.st2ind[act_num][0],self.st2ind[act_num][1]]
         #TODO dbg
-        # print(pos)
-        # print(act_num)
+        # if IS_DEBUG: print(pos)
+        # if IS_DEBUG: print(act_num)
         self.ban = 3. - self.ban
         find_table = self.get_find_table()
         find_table[pos[0]][pos[1]]= 3. - self.ban
@@ -113,10 +114,10 @@ class Sim:
 
     def can_get(self,find_table,pos):
         can_get_ids = []
-        print('[find]->step to next stone x1:'+str(pos[0])+',y:'+str(pos[1]))
+        if IS_DEBUG: print('[find]->step to next stone x1:'+str(pos[0])+',y:'+str(pos[1]))
         not_del = self.find(find_table,pos)
         if not not_del:
-            print('[find]delete stones')
+            if IS_DEBUG: print('[find]delete stones')
             new_state = np.array([0.]+\
                 [find_table[self.st2ind[i][0]][
                             self.st2ind[i][1]] for i in range(1,82)])
@@ -128,7 +129,7 @@ class Sim:
     def get_all_can_get_ids(self,find_table,act_num):
         can_get_ids = []
         ft = copy.deepcopy(find_table)
-        print('[base]x:'+str(self.st2ind[act_num][0])+' y:'+str(self.st2ind[act_num][1]))
+        if IS_DEBUG: print('[base]x:'+str(self.st2ind[act_num][0])+' y:'+str(self.st2ind[act_num][1]))
         find_table[self.st2ind[act_num][0]][self.st2ind[act_num][1]] = self.ban
         for j in [[0,-1],[0,1],[-1,0],[1,0]]:
             ft = copy.deepcopy(find_table)
@@ -143,18 +144,18 @@ class Sim:
         ft[l_id[0]][l_id[1]] = 3.
         for i in [[0,-1],[0,1],[-1,0],[1,0]]:
             #TODO:debug
-            print('[check]x: '+str(l_id[0]+i[0])+',y: '+str(l_id[1]+i[1]))
+            if IS_DEBUG: print('[check]x: '+str(l_id[0]+i[0])+',y: '+str(l_id[1]+i[1]))
             
             if ft[l_id[0]+i[0]][l_id[1]+i[1]] == 3.0 - self.ban:
-                print('[find]-->step to next stone')
+                if IS_DEBUG: print('[find]-->step to next stone')
                 not_del = self.find(ft,[l_id[0]+i[0],l_id[1]+i[1]])
                 if not_del:
                     return True
             elif ft[l_id[0]+i[0]][l_id[1]+i[1]] == 0.:
-                print('[find]-->survive')
+                if IS_DEBUG: print('[find]-->survive')
                 return True
             else:
-                print('[find]-->stop')
+                if IS_DEBUG: print('[find]-->stop')
 
     def act(self,act_num):
         if 0<act_num:
@@ -167,9 +168,9 @@ class Sim:
                 self.state[i] = 0.
             self.kou = can_get_ids
             self.state[81+int(self.ban)]+=len(self.kou)
-            print('show find_table below')
+            if IS_DEBUG: print('show find_table below')
             for ft in find_table:
-                print(ft)
+                if IS_DEBUG: print(ft)
             self.was_pass = False
         if act_num ==0:
             if self.was_pass == True:
