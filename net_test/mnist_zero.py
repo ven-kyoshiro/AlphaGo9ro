@@ -134,12 +134,12 @@ def inference(x, y_, keep_prob, phase_train):
         # pool2_out = pool2.output()    
         pool2_flat = tf.reshape(conv2_out, [-1, 28*28*2])
     
-    with tf.variable_scope('fc1'):
-        fc1 = FullConnected(pool2_flat, 28*28*2, 1024)
-        fc1_out = fc1.output()
-        fc1_dropped = tf.nn.dropout(fc1_out, keep_prob)
+#   with tf.variable_scope('fc1'):
+#       fc1 = FullConnected(pool2_flat, 28*28*2, 1024)
+#       fc1_out = fc1.output()
+#       fc1_dropped = tf.nn.dropout(fc1_out, keep_prob)
     
-    y_pred = ReadOutLayer(fc1_dropped, 1024, 10).output()
+    y_pred = ReadOutLayer(pool2_flat, 28*28*2, 10).output()
     cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(y_pred+1e-7), 
                                     reduction_indices=[1]))
     loss = cross_entropy
