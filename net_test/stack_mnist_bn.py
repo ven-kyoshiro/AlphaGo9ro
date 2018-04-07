@@ -93,8 +93,7 @@ def build_graph(is_training):
 
   return x, phase_train, y_, train_step, accuracy
   
-
-  def train(mnist):
+def train(mnist):
   x, phase_train, y_, train_step, accuracy = build_graph(is_training=True)
 
   train_accuracy_summary = tf.scalar_summary('train accuracy', accuracy)
