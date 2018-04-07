@@ -5,7 +5,7 @@
 # https://gist.github.com/tomokishii/0ce3bdac1588b5cca9fa5fbdf6e1c412
 
 from __future__ import absolute_import
-from __future__ import division
+from __future__ import division 
 from __future__ import print_function
 
 import os
@@ -51,6 +51,7 @@ def batch_norm(x, n_out, phase_train):
         normed = tf.nn.batch_normalization(x, mean, var, beta, gamma, 1e-3)
     return normed
 #
+    
 
 def training(loss, learning_rate):
     optimizer = tf.train.AdamOptimizer(learning_rate)
@@ -92,45 +93,54 @@ def mlogloss(predicted, actual):
     return ans
 #
 
+def res_block(inputs):
+    conv_res1 = Convolution2D(inputs, (28, 28), 64, 64, (3, 3), activation='none')
+    conv_res1_bn = batch_norm(conv_res1.output(), 64, phase_train)
+    conv_res1_out = tf.nn.relu(conv_res1_bn)
+    conv_res2 = Convolution2D(conv_res1_out, (28, 28), 64, 64, (3, 3), activation='none')
+    conv_res2_bn = batch_norm(conv_res2.output(), 64, phase_train)
+    conv_res2_out = tf.nn.relu(conv_res2_bn+inputs)
+    return conv_res2_out
+
 # Create the model
 def inference(x, y_, keep_prob, phase_train):
     x_image = tf.reshape(x, [-1, 28, 28, 1])
     
     with tf.variable_scope('conv_1'):
-        conv1 = Convolution2D(x, (28, 28), 1, 32, (5, 5), activation='none')
-        conv1_bn = batch_norm(conv1.output(), 32, phase_train)
+        conv1 = Convolution2D(x, (28, 28), 1, 64, (5, 5), activation='none')
+        conv1_bn = batch_norm(conv1.output(), 64, phase_train)
         conv1_out = tf.nn.relu(conv1_bn)
-        pool1 = MaxPooling2D(conv1_out)
-        pool1_out = pool1.output()
+#        pool1 = MaxPooling2D(conv1_out)
+#        pool1_out = pool1.output()
        
         # input
-        conv_res1 = Convolution2D(pool1_out, (28, 28), 1, 32, (3, 3), activation='none')
-        conv_res1_bn = batch_norm(conv_res1.output(), 32, phase_train)
-        conv_res1_out = tf.nn.relu(conv_res1_bn)
-        conv_res2 = Convolution2D(x, (28, 28), 1, 64, (3, 3), activation='none')
-        conv_res2_bn = batch_norm(conv_res2.output(), 64, phase_train)
-        conv_res2_out = tf.nn.relu(conv_res2_bn)
+        res_block_out1 = res_block(conv1_out)
+        res_block_out2 = res_block(res_block_out1)
+        res_block_out3 = res_block(res_block_out2)
+        res_block_out4 = res_block(res_block_out3)
+        res_block_out5 = res_block(res_block_out4)
+        res_block_out6 = res_block(res_block_out5)
+        res_block_out7 = res_block(res_block_out6)
+        res_block_out8 = res_block(res_block_out7)
+        res_block_out9 = res_block(res_block_out8)
 
-
-    
     with tf.variable_scope('conv_2'):
-        conv2 = Convolution2D(conv_res2_out, (28, 28), 32, 64, (5, 5), 
+        conv2 = Convolution2D(res_block_out9, (28, 28), 64, 2, (1, 1), 
                                                           activation='none')
-        conv2_bn = batch_norm(conv2.output(), 64, phase_train)
+        conv2_bn = batch_norm(conv2.output(), 2, phase_train)
         conv2_out = tf.nn.relu(conv2_bn)
            
-        pool2 = MaxPooling2D(conv2_out)
-        pool2_out = pool2.output()    
-        pool2_flat = tf.reshape(pool2_out, [-1, 7*7*64])
+        # pool2 = MaxPooling2D(conv2_out)
+        # pool2_out = pool2.output()    
+        pool2_flat = tf.reshape(conv2_out, [-1, 28*28*2])
     
     with tf.variable_scope('fc1'):
-        fc1 = FullConnected(pool2_flat, 7*7*64, 1024)
+        fc1 = FullConnected(pool2_flat, 28*28*2, 1024)
         fc1_out = fc1.output()
         fc1_dropped = tf.nn.dropout(fc1_out, keep_prob)
     
     y_pred = ReadOutLayer(fc1_dropped, 1024, 10).output()
-    
-    cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(y_pred), 
+    cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(y_pred+1e-7), 
                                     reduction_indices=[1]))
     loss = cross_entropy
     train_step = training(loss, 1.e-4)
