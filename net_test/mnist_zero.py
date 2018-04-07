@@ -138,10 +138,9 @@ def inference(x, y_, keep_prob, phase_train):
     
     return loss, accuracy, y_pred
 
-def res_block(input):
+# def res_block(input):
 
  
-#
 if __name__ == '__main__':
     TASK = 'train'    # 'train' or 'test'
     
