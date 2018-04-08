@@ -20,7 +20,40 @@ mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
 chkpt_file = 'MNIST_data/mnist_cnn.ckpt'
 IS_DEBUG = False
 class Nn:
-    def batch_norm(self,x, n_out, phase_train):
+    def __init__(self, restore_call = False):
+        self.restore_call = restore_call
+
+        # Variables
+        #TODO:ここはselfいるかも
+        self.x = tf.placeholder(tf.float32, [None,None, 784])
+        self.y_ = tf.placeholder(tf.float32, [None, 10])
+        self.keep_prob = tf.placeholder(tf.float32)
+        self.phase_train = tf.placeholder(tf.bool, name='phase_train')
+        
+        loss, accuracy, self.y_pred = self.inference(self.x, self.y_, 
+                                             self.keep_prob)
+
+        # Train
+        lr = 0.01
+        train_step = tf.train.AdagradOptimizer(lr).minimize(loss)
+        vars_to_train = tf.trainable_variables()    # option-1
+        vars_for_bn1 = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, # TF >1.0
+                                         scope='conv_1/bn')
+        vars_for_bn1 = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, # TF >1.0
+                                         scope='res_block/bn')
+        vars_for_bn2 = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, # TF >1.0
+                                         scope='conv_2/bn')
+        vars_to_train = list(set(vars_to_train).union(set(vars_for_bn1)))
+        vars_to_train = list(set(vars_to_train).union(set(vars_for_bn2)))
+        self.saver = tf.train.Saver(vars_to_train)     # option-1
+        if self.restore_call:
+            vars_all = tf.all_variables()
+            vars_to_init = list(set(vars_all) - set(vars_to_train))
+            self.init = tf.variables_initializer(vars_to_init)   # TF >1.0
+        else:
+            self.init = tf.global_variables_initializer()    # TF >1.0
+
+    def batch_norm(self,x, n_out, phase_train): # FIXME:phase_train いらんかも
         """
         Batch normalization on convolutional maps.
         Ref.: http://stackoverflow.com/questions/33949786/how-could-i-use-batch-normalization-in-tensorflow
@@ -45,7 +78,7 @@ class Nn:
                 with tf.control_dependencies([ema_apply_op]):
                     return tf.identity(batch_mean), tf.identity(batch_var)
 
-            mean, var = tf.cond(phase_train,
+            mean, var = tf.cond(self.phase_train,
                                 mean_var_with_update,
                                 lambda: (ema.average(batch_mean), ema.average(batch_var)))
             normed = tf.nn.batch_normalization(x, mean, var, beta, gamma, 1e-3)
@@ -68,48 +101,23 @@ class Nn:
         
         return accuracy
 
-    def mlogloss(self,predicted, actual):
-        '''
-          args.
-             predicted : predicted probability
-                        (sum of predicted proba should be 1.0)
-             actual    : actual value, label
-        '''
-        def inner_fn(self,item):
-            eps = 1.e-15
-            item1 = min(item, (1 - eps))
-            item1 = max(item, eps)
-            res = np.log(item1)
-
-            return res
-        
-        nrow = actual.shape[0]
-        ncol = actual.shape[1]
-
-        mysum = sum([actual[i, j] * inner_fn(predicted[i, j]) 
-            for i in range(nrow) for j in range(ncol)])
-        
-        ans = -1 * mysum / nrow
-        
-        return ans
-#
 
     def res_block(self,inputs):
         conv_res1 = Convolution2D(inputs, (28, 28), 64, 64, (3, 3), activation='none')
-        conv_res1_bn = self.batch_norm(conv_res1.output(), 64, phase_train)
+        conv_res1_bn = self.batch_norm(conv_res1.output(), 64, self.phase_train)
         conv_res1_out = tf.nn.relu(conv_res1_bn)
         conv_res2 = Convolution2D(conv_res1_out, (28, 28), 64, 64, (3, 3), activation='none')
-        conv_res2_bn = self.batch_norm(conv_res2.output(), 64, phase_train)
+        conv_res2_bn = self.batch_norm(conv_res2.output(), 64, self.phase_train)
         conv_res2_out = tf.nn.relu(conv_res2_bn+inputs)
         return conv_res2_out
 
 # Create the model
-    def inference(self,x, y_, keep_prob, phase_train):
+    def inference(self,x, y_, keep_prob):
         x_image = tf.reshape(x, [-1, 28, 28, 5])
         
         with tf.variable_scope('conv_1'):
             conv1 = Convolution2D(x, (28, 28), 5, 64, (5, 5), activation='none')
-            conv1_bn = self.batch_norm(conv1.output(), 64, phase_train)
+            conv1_bn = self.batch_norm(conv1.output(), 64, self.phase_train)
             conv1_out = tf.nn.relu(conv1_bn)
 #        pool1 = MaxPooling2D(conv1_out)
 #        pool1_out = pool1.output()
@@ -129,7 +137,7 @@ class Nn:
         with tf.variable_scope('conv_2'):
             conv2 = Convolution2D(res_block_out9, (28, 28), 64, 2, (1, 1), 
                                                               activation='none')
-            conv2_bn = self.batch_norm(conv2.output(), 2, phase_train)
+            conv2_bn = self.batch_norm(conv2.output(), 2, self.phase_train)
             conv2_out = tf.nn.relu(conv2_bn)
                
             # pool2 = MaxPooling2D(conv2_out)
@@ -148,45 +156,12 @@ class Nn:
         self.train_step = self.training(self.loss, 1.e-4)
         self.accuracy = self.evaluation(self.y_pred, y_)
         
-        return self.loss, accuracy, self.y_pred # ワンチャンリターンいらん
-
-    def __init__(self, restore_call = False):
-        self.restore_call = restore_call
-
-        # Variables
-        #TODO:ここはselfいるかも
-        x = tf.placeholder(tf.float32, [None,None, 784])
-        y_ = tf.placeholder(tf.float32, [None, 10])
-        keep_prob = tf.placeholder(tf.float32)
-        phase_train = tf.placeholder(tf.bool, name='phase_train')
-        
-        loss, accuracy, self.y_pred = self.inference(x, y_, 
-                                             keep_prob, phase_train)
-
-        # Train
-        lr = 0.01
-        train_step = tf.train.AdagradOptimizer(lr).minimize(loss)
-        vars_to_train = tf.trainable_variables()    # option-1
-        vars_for_bn1 = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, # TF >1.0
-                                         scope='conv_1/bn')
-        vars_for_bn1 = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, # TF >1.0
-                                         scope='res_block/bn')
-        vars_for_bn2 = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, # TF >1.0
-                                         scope='conv_2/bn')
-        vars_to_train = list(set(vars_to_train).union(set(vars_for_bn1)))
-        vars_to_train = list(set(vars_to_train).union(set(vars_for_bn2)))
-        self.saver = tf.train.Saver(vars_to_train)     # option-1
-        if self.restore_call:
-            vars_all = tf.all_variables()
-            vars_to_init = list(set(vars_all) - set(vars_to_train))
-            self.init = tf.variables_initializer(vars_to_init)   # TF >1.0
-        else:
-            self.init = tf.global_variables_initializer()    # TF >1.0
+        return self.loss, self.accuracy, self.y_pred # ワンチャンリターンいらん
 
 def main():
 
    # インスタンス作る
-    nn_kun = Nn(restore_call = False)
+    nn_kun = Nn(restore_call = True)
 
     # 学習データを用意
     # stack_mnistの訓練セットを作成 
@@ -235,28 +210,28 @@ def main():
     # そろそろNNを動かします
     with tf.Session() as sess: # if TASK == 'train':              # add in option-2 case
         sess.run(nn_kun.init)                     # option-1
-        if self.restore_call:
+        if nn_kun.restore_call:
             # Restore variables from disk.
-            saver.restore(sess, chkpt_file) 
+            nn_kun.saver.restore(sess, chkpt_file) 
 
         # 学習
         print('\n Training...')
-        for i in range(20001):
+        for i in range(2001):
             tr_ids = np.random.choice(range(len(train_labels_stack)),100)
             batch_xs = np.array([train_data_stack[j] for j in tr_ids])
             batch_ys = np.array([train_labels_stack[j] for j in tr_ids])
             # 100個選んで学習させる
-            nn_kun.train_step.run({x: batch_xs, y_: batch_ys, keep_prob: 0.5,
-                phase_train: True}) # TODO:phase_trainもコードから消す??
+            nn_kun.train_step.run({nn_kun.x: batch_xs, nn_kun.y_: batch_ys, nn_kun.keep_prob: 0.5,
+                nn_kun.phase_train: True}) # TODO:phase_trainもコードから消す??
             # 途中経過を見る
             if i % 100 == 0:
-                cv_fd = {x: batch_xs, y_: batch_ys, keep_prob: 1.0, 
-                                               phase_train: False}
+                cv_fd = {nn_kun.x: batch_xs, nn_kun.y_: batch_ys, nn_kun.keep_prob: 1.0, 
+                                               nn_kun.phase_train: False}
                 train_loss = nn_kun.loss.eval(cv_fd)
                 print('---test---')
                 print('[dbg] batch_ys[0]*5 = {0}'.format(np.round([b*5 for b in batch_ys[0]],2)))
                 print('[dbg] y_pred[0]*5   = {0}'.format(np.round([b*5 for b in nn_kun.y_pred.eval(cv_fd)[0]],2)))
-                train_accuracy = accuracy.eval(cv_fd)
+                train_accuracy = nn_kun.accuracy.eval(cv_fd)
                 
                 print('  step, loss, accurary = %6d: %8.4f, %8.4f' % (i, 
                     train_loss, train_accuracy))
@@ -267,14 +242,10 @@ def main():
         # 評価
         # Test trained model
         # TODO: バッチサイズ＝１で評価できるかの確認
-        test_fd = {x: test_data_stack, y_: test_labels_stack, 
-                  keep_prob: 1.0, phase_train: False})
+        test_fd = {nn_kun.x: test_data_stack, nn_kun.y_: test_labels_stack, 
+                  nn_kun.keep_prob: 1.0, nn_kun.phase_train: False}
         # TODO:keep_probをなくす
         print(' accuracy = %8.4f' % nn_kun.accuracy.eval(test_fd))
-        # Multiclass Log Loss
-        pred = nn_kun.y_pred.eval(test_fd)
-        act = mnist.test.labels #???
-        print(' multiclass logloss = %8.4f' % nn_kun.mlogloss(pred, act))
 
 
 if __name__ == '__main__':
