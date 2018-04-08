@@ -255,7 +255,7 @@ if __name__ == '__main__':
         test_labels_stack = []
         for ids in test_id:
             test_data_stack.append([test_data[i] for i in ids])
-            labels_sub = test_labels[ids[0]]
+            labels_sub = copy.deepcopy(test_labels[ids[0]])
             # debug
             try:
                 for i in ids[1:]:
