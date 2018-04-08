@@ -238,8 +238,8 @@ if __name__ == '__main__':
                                                    phase_train: False}
                     train_loss = loss.eval(cv_fd)
                     print('---test---')
-                    print('[dbg] batch_ys[0]*5 = {0}'.format([b*5 for b in batch_ys[0]]))
-                    print('[dbg] y_pred.eval(cv_fd)[0]*5 = {0}'.format([b*5 for b in y_pred.eval(cv_fd)[0]]))
+                    print('[dbg] batch_ys[0]*5 = {0}'.format(np.round([b*5 for b in batch_ys[0]],2)))
+                    print('[dbg] y_pred[0]*5   = {0}'.format(np.round([b*5 for b in y_pred.eval(cv_fd)[0]],2)))
                     train_accuracy = accuracy.eval(cv_fd)
                     
                     print('  step, loss, accurary = %6d: %8.4f, %8.4f' % (i, 
