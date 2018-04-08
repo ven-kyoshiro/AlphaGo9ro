@@ -7,6 +7,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import copy
 import random
 import numpy as np
 import tensorflow as tf
@@ -17,7 +18,7 @@ from my_nn_lib import FullConnected, ReadOutLayer
 
 mnist = input_data.read_data_sets("../MNIST_data/", one_hot=True)
 chkpt_file = '../MNIST_data/mnist_cnn.ckpt'
-
+IS_DEBUG = False
 
 def batch_norm(x, n_out, phase_train):
     """
@@ -59,6 +60,7 @@ def training(loss, learning_rate):
     train_op = optimizer.minimize(loss, global_step=global_step)
     
     return train_op
+
 
 def evaluation(y_pred, y):
     correct = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y, 1))
@@ -111,7 +113,8 @@ def inference(x, y_, keep_prob, phase_train):
         conv1_out = tf.nn.relu(conv1_bn)
 #        pool1 = MaxPooling2D(conv1_out)
 #        pool1_out = pool1.output()
-       
+
+    with tf.variable_scope('res_block'):
         # input
         res_block_out1 = res_block(conv1_out)
         res_block_out2 = res_block(res_block_out1)
@@ -168,6 +171,8 @@ if __name__ == '__main__':
     vars_to_train = tf.trainable_variables()    # option-1
     vars_for_bn1 = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, # TF >1.0
                                      scope='conv_1/bn')
+    vars_for_bn1 = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, # TF >1.0
+                                     scope='res_block/bn')
     vars_for_bn2 = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, # TF >1.0
                                      scope='conv_2/bn')
     vars_to_train = list(set(vars_to_train).union(set(vars_for_bn1)))
@@ -187,27 +192,27 @@ if __name__ == '__main__':
     saver = tf.train.Saver(vars_to_train)     # option-1
     # saver = tf.train.Saver()                   # option-2
     
-    # 全て５個ずつに変える関数
+    # stack_mnistの訓練セットを作成 
     train_data = mnist.train.images
     train_labels = mnist.train.labels
     train_id = [[random.randrange(
               0, len(train_data)) for j in range(5)] for i in range(len(train_data))]
+    # train_id は　[index が５個]の配列になってる
     train_data_stack = []
     train_labels_stack = []
     for ids in train_id:
         train_data_stack.append([train_data[i] for i in ids])
-        labels_sub = train_labels[ids[0]]
-        # debug
-        try:
-            for i in ids[1:]:
-                labels_sub += train_labels[i]
-        except:
-            print('debug')
-            print('i:{0}'.format(i))
+        labels_sub = copy.deepcopy(train_labels[ids[0]])
+        if IS_DEBUG: print('[dbg] train_labels[ids[0]] = {0}'.format(train_labels[ids[0]]))
+        # if IS_DEBUG: print('[dgb] labels_subの初期 = {0}'.format(labels_sub))
+        for i in ids[1:]:
+            labels_sub += train_labels[i]
+            if IS_DEBUG: print('[dbg] train_labels[{0}] = {1}'.format(i,train_labels[i]))
+        # if IS_DEBUG: print('[dgb] labels_subの足したあと = {0}'.format(labels_sub))
         labels_sub = labels_sub/5.0
+        if IS_DEBUG: print('[dbg] ids = {0}, np.sum(labels_sub) = {1}'.format(ids,np.sum(labels_sub)))
+        # if IS_DEBUG: print('[dgb] labels_subの５で割った = {0}'.format(labels_sub))
         train_labels_stack.append(labels_sub)
-    # print(train_labels_stack[0])
-    # print(train_data_stack[0])
     
     with tf.Session() as sess:
         # if TASK == 'train':              # add in option-2 case
@@ -219,43 +224,47 @@ if __name__ == '__main__':
 
         if TASK == 'train':
             print('\n Training...')
-            for i in range(100001):
-                #TODO:ここを変える batch_xs, batch_ys = mnist.train.next_batch(100)
+            for i in range(20001):
                 tr_ids = np.random.choice(range(len(train_labels_stack)),100)
-                batch_xs = np.array([train_data_stack[i] for i in tr_ids])
-                batch_ys = np.array([train_labels_stack[i] for i in tr_ids])
+                batch_xs = np.array([train_data_stack[j] for j in tr_ids])
+                batch_ys = np.array([train_labels_stack[j] for j in tr_ids])
+                for j in tr_ids:
+                    if IS_DEBUG: print('[dbg] train_labels_stack[{0}]={1}'.format(j, train_labels_stack[j]))
+                # for debug: if IS_DEBUG: print('[dbg] batch_ys[0] = {0} '.format(batch_ys[0]))
                 train_step.run({x: batch_xs, y_: batch_ys, keep_prob: 0.5,
                       phase_train: True})
-                if i % 10000 == 0:
+                if i % 100 == 0:
                     cv_fd = {x: batch_xs, y_: batch_ys, keep_prob: 1.0, 
                                                    phase_train: False}
                     train_loss = loss.eval(cv_fd)
+                    print('---test---')
+                    print('[dbg] batch_ys[0]*5 = {0}'.format([b*5 for b in batch_ys[0]]))
+                    print('[dbg] y_pred.eval(cv_fd)[0]*5 = {0}'.format([b*5 for b in y_pred.eval(cv_fd)[0]]))
                     train_accuracy = accuracy.eval(cv_fd)
                     
                     print('  step, loss, accurary = %6d: %8.4f, %8.4f' % (i, 
                         train_loss, train_accuracy))
 
         # Test trained model
-        # TODO: ここも大幅に変える
-    # 全て５個ずつに変える関数
-    test_data = mnist.test.images
-    test_labels = mnist.test.labels
-    test_id = [[random.randrange(
+        # テスト用のセット作成 
+        test_data = mnist.test.images
+        test_labels = mnist.test.labels
+        test_id = [[random.randrange(
               0, len(test_data)) for j in range(5)] for i in range(len(test_data))]
-    test_data_stack = []
-    test_labels_stack = []
-    for ids in test_id:
-        test_data_stack.append([test_data[i] for i in ids])
-        labels_sub = test_labels[ids[0]]
-        # debug
-        try:
-            for i in ids[1:]:
-                labels_sub += test_labels[i]
-        except:
-            print('debug')
-            print('i:{0}'.format(i))
-        labels_sub = labels_sub/5.0
-        test_labels_stack.append(labels_sub)
+        test_data_stack = []
+        test_labels_stack = []
+        for ids in test_id:
+            test_data_stack.append([test_data[i] for i in ids])
+            labels_sub = test_labels[ids[0]]
+            # debug
+            try:
+                for i in ids[1:]:
+                    labels_sub += test_labels[i]
+            except:
+                if IS_DEBUG: print('debug')
+                if IS_DEBUG: print('i:{0}'.format(i))
+            labels_sub = labels_sub/5.0
+            test_labels_stack.append(labels_sub)
         test_fd = {x: np.array(test_data_stack), y_: np.array(test_labels_stack), 
                 keep_prob: 1.0, phase_train: False}
         print(' accuracy = %8.4f' % accuracy.eval(test_fd))
