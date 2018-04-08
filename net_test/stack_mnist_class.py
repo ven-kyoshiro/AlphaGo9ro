@@ -24,18 +24,15 @@ class Nn:
         self.restore_call = restore_call
 
         # Variables
-        #TODO:ここはselfいるかも
         self.x = tf.placeholder(tf.float32, [None,None, 784])
         self.y_ = tf.placeholder(tf.float32, [None, 10])
-        self.keep_prob = tf.placeholder(tf.float32)
         self.phase_train = tf.placeholder(tf.bool, name='phase_train')
         
-        loss, accuracy, self.y_pred = self.inference(self.x, self.y_, 
-                                             self.keep_prob)
+        self.inference(self.x, self.y_)
 
         # Train
         lr = 0.01
-        train_step = tf.train.AdagradOptimizer(lr).minimize(loss)
+        train_step = tf.train.AdagradOptimizer(lr).minimize(self.loss)
         vars_to_train = tf.trainable_variables()    # option-1
         vars_for_bn1 = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, # TF >1.0
                                          scope='conv_1/bn')
@@ -53,7 +50,7 @@ class Nn:
         else:
             self.init = tf.global_variables_initializer()    # TF >1.0
 
-    def batch_norm(self,x, n_out, phase_train): # FIXME:phase_train いらんかも
+    def batch_norm(self,x, n_out, phase_train):
         """
         Batch normalization on convolutional maps.
         Ref.: http://stackoverflow.com/questions/33949786/how-could-i-use-batch-normalization-in-tensorflow
@@ -112,7 +109,7 @@ class Nn:
         return conv_res2_out
 
 # Create the model
-    def inference(self,x, y_, keep_prob):
+    def inference(self,x, y_):
         x_image = tf.reshape(x, [-1, 28, 28, 5])
         
         with tf.variable_scope('conv_1'):
@@ -147,7 +144,7 @@ class Nn:
         # with tf.variable_scope('fc1'):
             # fc1 = FullConnected(pool2_flat, 28*28*2, 1024)
             # fc1_out = fc1.output()
-            # fc1_dropped = tf.nn.dropout(fc1_out, keep_prob)
+            # fc1_dropped = tf.nn.dropout(fc1_out)
         
         self.y_pred = ReadOutLayer(pool2_flat, 28*28*2, 10).output()
         cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(self.y_pred+1e-7), 
@@ -155,8 +152,6 @@ class Nn:
         self.loss = cross_entropy
         self.train_step = self.training(self.loss, 1.e-4)
         self.accuracy = self.evaluation(self.y_pred, y_)
-        
-        return self.loss, self.accuracy, self.y_pred # ワンチャンリターンいらん
 
 def main():
 
@@ -216,16 +211,16 @@ def main():
 
         # 学習
         print('\n Training...')
-        for i in range(2001):
+        for i in range(201):
             tr_ids = np.random.choice(range(len(train_labels_stack)),100)
             batch_xs = np.array([train_data_stack[j] for j in tr_ids])
             batch_ys = np.array([train_labels_stack[j] for j in tr_ids])
             # 100個選んで学習させる
-            nn_kun.train_step.run({nn_kun.x: batch_xs, nn_kun.y_: batch_ys, nn_kun.keep_prob: 0.5,
-                nn_kun.phase_train: True}) # TODO:phase_trainもコードから消す??
+            nn_kun.train_step.run({nn_kun.x: batch_xs, nn_kun.y_: batch_ys,
+                nn_kun.phase_train: True})
             # 途中経過を見る
             if i % 100 == 0:
-                cv_fd = {nn_kun.x: batch_xs, nn_kun.y_: batch_ys, nn_kun.keep_prob: 1.0, 
+                cv_fd = {nn_kun.x: batch_xs, nn_kun.y_: batch_ys, 
                                                nn_kun.phase_train: False}
                 train_loss = nn_kun.loss.eval(cv_fd)
                 print('---test---')
@@ -242,9 +237,8 @@ def main():
         # 評価
         # Test trained model
         # TODO: バッチサイズ＝１で評価できるかの確認
-        test_fd = {nn_kun.x: test_data_stack, nn_kun.y_: test_labels_stack, 
-                  nn_kun.keep_prob: 1.0, nn_kun.phase_train: False}
-        # TODO:keep_probをなくす
+        test_fd = {nn_kun.x: np.array([test_data_stack[0],]), nn_kun.y_: np.array([test_labels_stack[0],]), 
+                   nn_kun.phase_train: False}
         print(' accuracy = %8.4f' % nn_kun.accuracy.eval(test_fd))
 
 
