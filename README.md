@@ -9,7 +9,9 @@ implementation of the game of Go
 - Handicap : 6.5 eyes
 ## usage
 ```
-# run human vs human on gpu
+# run human vs human on gui
 python game/simulator_gui_human.py
 ```
+## human vs human on gui on screen
+![game screen](https://github.com/ven-kyoshiro/go_simulator/blob/master/image.png?raw=true)
 
